@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>My Journal &middot; Shorts Guard</title>
+    <style>
+      :root {
+        --cream: #fbf6ee;
+        --paper: #fffdf9;
+        --ink: #3a2f28;
+        --muted: #8a7a6d;
+        --amber: #b4763a;
+        --line: #ece2d5;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--cream);
+        color: var(--ink);
+        font: 16px/1.6 "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+      }
+      .wrap { max-width: 760px; margin: 0 auto; padding: 48px 24px 80px; }
+      header { text-align: center; margin-bottom: 32px; }
+      h1 {
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 34px;
+        margin: 0 0 6px;
+        letter-spacing: -0.01em;
+      }
+      .tagline { color: var(--muted); font-size: 15px; }
+      .privacy {
+        margin-top: 14px;
+        display: inline-block;
+        background: #f3ead9;
+        color: #7a5a2e;
+        border-radius: 999px;
+        padding: 6px 14px;
+        font-size: 13px;
+      }
+      .card {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 24px;
+        box-shadow: 0 8px 30px rgba(90, 70, 40, 0.06);
+      }
+      form.card { margin-bottom: 28px; }
+      label { display: block; font-size: 13px; color: var(--muted); margin: 12px 0 5px; }
+      input, textarea {
+        width: 100%;
+        padding: 12px 14px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #fff;
+        color: var(--ink);
+        font: 15px inherit;
+      }
+      input:focus, textarea:focus {
+        outline: 2px solid var(--amber);
+        outline-offset: 1px;
+        border-color: var(--amber);
+      }
+      textarea { resize: vertical; min-height: 64px; }
+      .actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+      button {
+        font: 600 15px inherit;
+        padding: 11px 20px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: #fff;
+        color: var(--ink);
+        cursor: pointer;
+      }
+      button.primary { background: var(--amber); color: #fff; border-color: var(--amber); }
+      button:hover { filter: brightness(0.97); }
+      button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+      .toolbar { display: flex; gap: 10px; align-items: center; margin: 8px 0 18px; flex-wrap: wrap; }
+      .toolbar input { flex: 1; min-width: 180px; }
+      .entry { position: relative; margin-bottom: 14px; }
+      .entry h3 { margin: 0 0 4px; font-size: 16px; }
+      .meta { font-size: 12px; color: var(--muted); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+      .badge {
+        border-radius: 999px;
+        padding: 2px 10px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+      }
+      .badge.distraction { background: #fbe4d6; color: #a4501f; }
+      .badge.traction { background: #e0efe1; color: #2f6b3a; }
+      .badge.note { background: #eee6da; color: #7a5a2e; }
+      .field { margin-top: 10px; }
+      .field .k { font-size: 12px; color: var(--muted); }
+      .del {
+        position: absolute;
+        top: 18px;
+        right: 18px;
+        border: 0;
+        background: transparent;
+        color: var(--muted);
+        cursor: pointer;
+        font-size: 13px;
+      }
+      .del:hover { color: #a4501f; }
+      .empty { text-align: center; color: var(--muted); padding: 40px 0; font-style: italic; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <h1>My Journal</h1>
+        <div class="tagline">What pulled you away, why, and from what.</div>
+        <div class="privacy" id="syncState">Stored in this browser.</div>
+        <div class="tagline" id="ver" style="font-size: 12px; margin-top: 6px; opacity: 0.6"></div>
+      </header>
+
+      <form class="card" id="add-form">
+        <label for="f-what">What pulled you away?</label>
+        <input id="f-what" type="text" placeholder="e.g. one more Short, a notification, boredom" />
+        <label for="f-why">Why, honestly?</label>
+        <textarea id="f-why" placeholder="e.g. the assignment felt hard and I wanted an easy hit"></textarea>
+        <label for="f-from">From what were you distracted?</label>
+        <input id="f-from" type="text" placeholder="e.g. revising for the exam" />
+        <div class="actions">
+          <button type="submit" class="primary">Save entry</button>
+          <button type="button" id="clear-form">Clear</button>
+        </div>
+      </form>
+
+      <div class="toolbar">
+        <input id="search" type="search" placeholder="Search your entries&hellip;" />
+        <button type="button" id="export">Export</button>
+        <button type="button" id="wipe">Delete all</button>
+      </div>
+
+      <div id="list"></div>
+    </div>
+
+    <script src="journal.js"></script>
+  </body>
+</html>

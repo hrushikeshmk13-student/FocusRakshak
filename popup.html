@@ -1,0 +1,176 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      body {
+        width: 330px;
+        margin: 0;
+        padding: 16px;
+        font: 14px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        background: #0f0f12;
+        color: #eee;
+      }
+      h1 { font-size: 15px; margin: 0 0 4px; }
+      .section { margin-top: 16px; padding-top: 12px; border-top: 1px solid #26262c; }
+      .section-title { font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; opacity: 0.55; }
+      label { display: block; margin: 12px 0 4px; font-size: 12px; opacity: 0.7; }
+      textarea, input {
+        width: 100%;
+        box-sizing: border-box;
+        background: #1b1b20;
+        color: #fff;
+        border: 1px solid #333;
+        border-radius: 8px;
+        padding: 8px;
+        font: 13px system-ui;
+      }
+      textarea { height: 64px; resize: vertical; }
+      .mono { font: 12px ui-monospace, Menlo, Consolas, monospace; }
+      .row { display: flex; gap: 8px; }
+      .row > div { flex: 1; }
+      .check { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+      .check input { width: auto; }
+      button {
+        margin-top: 14px;
+        width: 100%;
+        padding: 10px;
+        border: 0;
+        border-radius: 8px;
+        background: #fff;
+        color: #111;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button.ghost { background: #26262c; color: #eee; margin-top: 8px; }
+      button.warm { background: #b4763a; color: #fff; }
+      .status { font-size: 12px; opacity: 0.8; margin-top: 10px; min-height: 14px; word-break: break-word; }
+      .hint { font-size: 11px; opacity: 0.5; margin-top: 4px; }
+      .progress { font-size: 12px; opacity: 0.8; margin-top: 8px; white-space: pre-line; }
+    </style>
+  </head>
+  <body>
+    <h1 id="title">FocusRakshak</h1>
+
+    <label>Your quote (shown on the alert)</label>
+    <textarea id="quote"></textarea>
+
+    <div class="section">
+      <div class="section-title">Passes &amp; cooldown</div>
+      <div class="row">
+        <div>
+          <label>Passes per day</label>
+          <input id="dailyPasses" type="number" min="0" />
+        </div>
+        <div>
+          <label>Each pass buys (min)</label>
+          <input id="passMinutes" type="number" min="1" />
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label>Cooldown after N Shorts</label>
+          <input id="cooldownAfterShorts" type="number" min="1" />
+        </div>
+        <div>
+          <label>Cooldown (min)</label>
+          <input id="cooldownMinutes" type="number" min="1" />
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label>No passes after (hour)</label>
+          <input id="passCutoffHour" type="number" min="0" max="23" />
+        </div>
+        <div>
+          <label>Passes resume (hour)</label>
+          <input id="passResumeHour" type="number" min="0" max="23" />
+        </div>
+      </div>
+      <label>Forced pause before Traction (seconds)</label>
+      <input id="pauseSeconds" type="number" min="0" />
+      <div class="hint">Distraction is never paused — it opens the note form immediately.</div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Triggers</div>
+      <div class="row">
+        <div>
+          <label>First alert after (min)</label>
+          <input id="dwellMinutes" type="number" min="1" />
+        </div>
+        <div>
+          <label>Re-alert every (min)</label>
+          <input id="alertMinutes" type="number" min="1" />
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label>Shorts before first alert</label>
+          <input id="limit" type="number" min="1" />
+        </div>
+        <div>
+          <label>Re-alert every N Shorts</label>
+          <input id="alertEvery" type="number" min="1" />
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Exemptions &amp; blocks</div>
+      <label>Allow domains (one per line, subdomains included)</label>
+      <textarea id="allowlist" class="mono"></textarea>
+
+      <label>Allow specific URLs (one per line, full or partial)</label>
+      <textarea id="allowUrls" class="mono"></textarea>
+      <div class="hint">e.g. https://www.youtube.com/watch?v=ABC123 — exempts that exact video.</div>
+
+      <label>Strictly block URLs (one per line, full or partial)</label>
+      <textarea id="blockUrls" class="mono"></textarea>
+      <div class="hint">Matched before anything else. No pass, no override.</div>
+
+      <label>Focus targets — "match | minutes" per line</label>
+      <textarea id="targets" class="mono"></textarea>
+      <div class="hint">e.g. vibrantacademy.com | 60 — silent there, and tracks your daily minutes.</div>
+      <div class="progress" id="targetProgress"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Pomodoro reminder</div>
+      <label class="check"><input type="checkbox" id="pomodoroEnabled" /> Enabled</label>
+      <div class="row">
+        <div>
+          <label>Every N minutes</label>
+          <input id="pomodoroMinutes" type="number" min="1" />
+        </div>
+        <div>
+          <label>Show for (seconds)</label>
+          <input id="reminderSeconds" type="number" min="1" />
+        </div>
+      </div>
+      <label>Size (% of screen width)</label>
+      <input id="reminderSize" type="number" min="10" max="80" />
+      <label>Reminder text</label>
+      <input id="reminderText" type="text" />
+    </div>
+
+    <div class="section">
+      <div class="section-title">Weekly analysis sync</div>
+      <label>Sync webhook URL (Google Apps Script, ends in /exec)</label>
+      <input id="syncUrl" type="url" placeholder="https://script.google.com/.../exec" />
+      <button id="testSync" class="ghost">Send test row</button>
+      <button id="backfill" class="ghost">Upload existing entries</button>
+      <div class="status" id="syncStatus"></div>
+    </div>
+
+    <label>"Back to study" goes to</label>
+    <input id="studyUrl" type="url" />
+
+    <button id="save">Save</button>
+    <button id="reset" class="ghost">Reset today's passes</button>
+    <button id="journal" class="warm">Open my journal</button>
+    <div class="status" id="status"></div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
