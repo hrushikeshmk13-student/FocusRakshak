@@ -3,8 +3,8 @@
 const DEFAULTS = {
   pomodoroEnabled: true,
   pomodoroMinutes: 20,
-  reminderSeconds: 3,
-  reminderSize: 20,
+  reminderSeconds: 15,
+  reminderSize: 70,
   reminderText: "Quick reset \u2014 breathe, then back to focus."
 };
 
