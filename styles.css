@@ -33,6 +33,12 @@
   font-size: clamp(18px, 1.6vw, 26px);
   font-weight: 600;
 }
+#sg-overlay .sg-risk {
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffb86b;
+  margin-top: 8px;
+}
 #sg-overlay .sg-sub {
   margin-top: 8px;
   font-size: 14px;

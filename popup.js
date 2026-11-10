@@ -21,7 +21,11 @@ const DEFAULTS = {
   pomodoroMinutes: 20,
   reminderSeconds: 15,
   reminderSize: 70,
-  reminderText: "Quick reset \u2014 breathe, then back to focus."
+  reminderText: "Quick reset \u2014 breathe, then back to focus.",
+  adaptiveRisk: true,
+  riskWindowDays: 14,
+  riskMinSamples: 8,
+  riskMaxShift: 0.5
 };
 
 const $ = (id) => document.getElementById(id);
@@ -50,6 +54,7 @@ chrome.storage.sync.get(DEFAULTS, (s) => {
   $("reminderSeconds").value = s.reminderSeconds;
   $("reminderSize").value = s.reminderSize;
   $("reminderText").value = s.reminderText;
+  $("adaptiveRisk").checked = !!s.adaptiveRisk;
   $("syncUrl").value = s.syncUrl || "";
 });
 
@@ -125,6 +130,7 @@ $("save").addEventListener("click", () => {
       reminderSeconds: Math.max(15, Number($("reminderSeconds").value) || DEFAULTS.reminderSeconds),
       reminderSize: Math.max(10, Math.min(90, Number($("reminderSize").value) || DEFAULTS.reminderSize)),
       reminderText: $("reminderText").value.trim() || DEFAULTS.reminderText,
+      adaptiveRisk: $("adaptiveRisk").checked,
       syncUrl: $("syncUrl").value.trim()
     },
     () => {
