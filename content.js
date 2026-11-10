@@ -35,7 +35,14 @@ const DEFAULTS = {
   // Display-only: the pomodoro's "non-allowed time today" figure is shown at
   // this multiple. The stored and synced value stays the true one.
   pomoDisplayMultiplier: 1.5,
-  pomoMinSeconds: 15
+  pomoMinSeconds: 15,
+
+  // Adaptive risk: learn which hours of the day you actually slip, then move
+  // the leash there. Silent until an hour has earned enough evidence.
+  adaptiveRisk: true,
+  riskWindowDays: 14,      // trailing days the model looks at
+  riskMinSamples: 8,       // active days an hour needs before it counts
+  riskMaxShift: 0.5        // the leash may move by at most ±50%
 };
 
 let settings = { ...DEFAULTS };
@@ -56,14 +63,14 @@ let targetProgress = null;
 let shortWatchSeconds = 0;
 let countedShorts = new Set();
 let lastPersistAt = 0;
+let history = {};
+let lastHistFlush = 0;
 
 const now = () => Date.now();
-const todayKey = () => {
-  const d = new Date();
-  return (
-    d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0")
-  );
-};
+const currentHour = () => new Date().getHours();
+const dateKey = (d) =>
+  d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+const todayKey = () => dateKey(new Date());
 const shortId = () => (location.pathname.match(/^\/shorts\/([^/?]+)/) || [])[1] || null;
 
 // Dwell state is keyed on host+path so a refresh resumes the same clock
@@ -84,8 +91,91 @@ function countShort(key) {
   countedShorts.add(key);
   sessionViewed++;
   daily.shortsViewed = (daily.shortsViewed || 0) + 1;
+  histAdd("s", 1);
   persistDaily();
 }
+
+// ---- Hour-of-day history ------------------------------------------------
+// history[YYYY-MM-DD].hours[h] = { p: passes, s: shorts, t: seconds here }
+
+const emptyDay = () => ({ hours: Array.from({ length: 24 }, () => ({ p: 0, s: 0, t: 0 })) });
+
+function histAdd(field, n) {
+  const k = todayKey();
+  const day = history[k] || (history[k] = emptyDay());
+  if (!Array.isArray(day.hours) || day.hours.length !== 24) day.hours = emptyDay().hours;
+  day.hours[currentHour()][field] += n;
+  if (now() - lastHistFlush > 5000) {
+    lastHistFlush = now();
+    persistHistory();
+  }
+}
+
+function persistHistory() {
+  const keys = Object.keys(history).sort();
+  const keep = Math.max(7, Number(settings.riskWindowDays) || 14) * 2;
+  if (keys.length > keep) keys.slice(0, keys.length - keep).forEach((k) => delete history[k]);
+  chrome.storage.local.set({ history });
+}
+
+// Per-hour pass rate against your own baseline. Needs real evidence before it
+// says anything: an hour with fewer than riskMinSamples active days is ignored.
+function riskProfile() {
+  const days = Object.keys(history).sort().slice(-Math.max(7, Number(settings.riskWindowDays) || 14));
+  if (days.length < 3) return { ok: false, days: days.length };
+  const perHour = Array.from({ length: 24 }, () => ({ samples: 0, passes: 0 }));
+  let totalPasses = 0;
+  let activeHours = 0;
+  days.forEach((k) => {
+    const hrs = history[k] && history[k].hours;
+    if (!Array.isArray(hrs)) return;
+    hrs.forEach((b, i) => {
+      if (!b) return;
+      if ((b.p || 0) > 0 || (b.s || 0) > 0 || (b.t || 0) > 0) {
+        perHour[i].samples++;
+        activeHours++;
+      }
+      perHour[i].passes += b.p || 0;
+      totalPasses += b.p || 0;
+    });
+  });
+  const baseline = activeHours ? totalPasses / activeHours : 0;
+  return { ok: true, days: days.length, perHour, baseline };
+}
+
+// 1 = your average hour. Capped by riskMaxShift so a bad week cannot lock you out.
+function riskMultiplier(hour) {
+  if (!settings.adaptiveRisk) return 1;
+  const rp = riskProfile();
+  if (!rp.ok || !rp.baseline) return 1;
+  const b = rp.perHour[hour];
+  if (!b || b.samples < Math.max(1, Number(settings.riskMinSamples) || 8)) return 1;
+  if (b.passes < 3) return 1;
+  const ratio = b.passes / b.samples / rp.baseline;
+  const shift = Math.max(0, Math.min(1, Number(settings.riskMaxShift) || 0.5));
+  return Math.max(1 - shift, Math.min(1 + shift, 1 + shift * (ratio - 1)));
+}
+
+function riskNote() {
+  if (!settings.adaptiveRisk) return "";
+  const rp = riskProfile();
+  if (!rp.ok || !rp.baseline) return "";
+  const h = currentHour();
+  const b = rp.perHour[h];
+  if (!b || b.samples < Math.max(1, Number(settings.riskMinSamples) || 8)) return "";
+  if (riskMultiplier(h) <= 1.1) return "";
+  return (
+    "Danger hour \u00b7 " + (b.passes / b.samples).toFixed(1) + "/hr vs your " +
+    rp.baseline.toFixed(1) + " average"
+  );
+}
+
+// Dwell grace, moved by the risk of the hour you are in.
+function graceSeconds() {
+  const base = Math.max(1, Number(settings.dwellMinutes) || 1) * 60;
+  return Math.max(30, Math.round(base * riskMultiplier(currentHour())));
+}
+
 const passesLeft = () => Math.max(0, (settings.dailyPasses || 0) - (daily ? daily.passesUsed || 0 : 0));
 const normDomain = (d) =>
   String(d || "").trim().toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.*$/, "");
@@ -159,7 +249,10 @@ chrome.storage.onChanged.addListener((_c, area) => {
 
 function start() {
   if (tick) return;
-  chrome.storage.local.get({ daily: null, passState: null, targetProgress: null, pageState: null }, (d) => {
+  chrome.storage.local.get(
+    { daily: null, passState: null, targetProgress: null, pageState: null, history: {} },
+    (d) => {
+    history = d.history && typeof d.history === "object" ? d.history : {};
     daily =
       d.daily && d.daily.date === todayKey()
         ? d.daily
@@ -178,14 +271,15 @@ function start() {
     // Resume this page's dwell clock if we were already here today.
     const ps = d.pageState;
     const resume = ps && ps.key === pageKey() && ps.date === todayKey();
-    const grace = Math.max(1, settings.dwellMinutes || 1) * 60;
+    const grace = graceSeconds();
     visibleSeconds = resume ? Math.max(0, Number(ps.visibleSeconds) || 0) : 0;
     nextAlertAt = resume ? Number(ps.nextAlertAt) || grace : grace;
     lastPersistAt = visibleSeconds;
 
     nextShortAlertAt = Math.max(1, settings.limit || 1);
     tick = setInterval(beat, 1000);
-  });
+    }
+  );
 }
 
 function rolloverIfNeeded() {
@@ -234,6 +328,7 @@ function beat() {
 
   // Time spent on non-allowed pages today (allowlist/target pages returned above).
   daily.nonAllowedSeconds = (daily.nonAllowedSeconds || 0) + 1;
+  histAdd("t", 1);
   if (daily.nonAllowedSeconds % 10 === 0) persistDaily();
 
   // Count-based trigger (YouTube Shorts). Counting is by viewing, not only by
@@ -324,7 +419,12 @@ function showAlert() {
   journal.textContent = "Open my journal";
   journal.addEventListener("click", () => window.open(chrome.runtime.getURL("journal.html"), "_blank"));
 
-  card.append(quote, question, sub, timer, actions, passes, note, journal);
+  const risk = document.createElement("div");
+  risk.className = "sg-risk";
+  risk.textContent = riskNote();
+  if (!risk.textContent) risk.style.display = "none";
+
+  card.append(quote, question, sub, risk, timer, actions, passes, note, journal);
   overlay.appendChild(card);
   (document.body || document.documentElement).appendChild(overlay);
 
@@ -428,13 +528,17 @@ function onTraction() {
 
   daily.passesUsed = (daily.passesUsed || 0) + 1;
   persistDaily();
+  histAdd("p", 1);
+  persistHistory();
 
   // Time-boxed: the pass buys N minutes of quiet.
   passUntil = now() + Math.max(1, Number(settings.passMinutes) || 5) * 60000;
 
   // Cooldown: every pass locks the next one, whatever the page. A heavy Shorts
   // session stacks a longer lock on top.
-  cooldownUntil = now() + Math.max(1, Number(settings.passCooldownMinutes) || 20) * 60000;
+  const risk = riskMultiplier(currentHour());
+  cooldownUntil =
+    now() + Math.max(1, Math.round((Number(settings.passCooldownMinutes) || 20) * risk)) * 60000;
   if (sessionViewed >= Math.max(1, Number(settings.cooldownAfterShorts) || 10)) {
     cooldownUntil = Math.max(
       cooldownUntil,
