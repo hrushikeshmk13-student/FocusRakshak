@@ -128,8 +128,8 @@
   background: rgba(20, 20, 24, 0.95);
   color: #fff;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
-  padding: 22px 24px;
+  border-radius: 20px;
+  padding: 40px 48px;
   text-align: center;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
@@ -144,8 +144,22 @@
   margin-bottom: 6px;
 }
 #sg-pomodoro .sg-pomo-text {
-  font-size: clamp(15px, 1.4vw, 22px);
-  font-weight: 600;
+  font-size: clamp(22px, 3.4vw, 52px);
+  font-weight: 700;
+  line-height: 1.2;
+}
+#sg-pomodoro .sg-pomo-spent {
+  margin-top: 18px;
+  font-size: clamp(16px, 1.9vw, 30px);
+  font-weight: 700;
+  color: #ff8a7a;
+}
+#sg-pomodoro .sg-pomo-hold {
+  margin-top: 12px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.5;
 }
 @keyframes sg-pomo-in {
   from { opacity: 0; transform: translate(-50%, -48%); }

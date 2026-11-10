@@ -19,8 +19,8 @@ const DEFAULTS = {
   syncUrl: "",
   pomodoroEnabled: true,
   pomodoroMinutes: 20,
-  reminderSeconds: 3,
-  reminderSize: 20,
+  reminderSeconds: 15,
+  reminderSize: 70,
   reminderText: "Quick reset \u2014 breathe, then back to focus."
 };
 
@@ -122,8 +122,8 @@ $("save").addEventListener("click", () => {
       studyUrl: $("studyUrl").value.trim() || DEFAULTS.studyUrl,
       pomodoroEnabled: $("pomodoroEnabled").checked,
       pomodoroMinutes: Math.max(1, Number($("pomodoroMinutes").value) || DEFAULTS.pomodoroMinutes),
-      reminderSeconds: Math.max(1, Number($("reminderSeconds").value) || DEFAULTS.reminderSeconds),
-      reminderSize: Math.max(10, Math.min(80, Number($("reminderSize").value) || DEFAULTS.reminderSize)),
+      reminderSeconds: Math.max(15, Number($("reminderSeconds").value) || DEFAULTS.reminderSeconds),
+      reminderSize: Math.max(10, Math.min(90, Number($("reminderSize").value) || DEFAULTS.reminderSize)),
       reminderText: $("reminderText").value.trim() || DEFAULTS.reminderText,
       syncUrl: $("syncUrl").value.trim()
     },
@@ -176,7 +176,10 @@ $("backfill").addEventListener("click", () => {
 
 $("reset").addEventListener("click", () => {
   chrome.storage.local.set(
-    { daily: { date: "", passesUsed: 0, shortsViewed: 0 }, passState: { passUntil: 0, cooldownUntil: 0 } },
+    {
+      daily: { date: "", passesUsed: 0, shortsViewed: 0, nonAllowedSeconds: 0 },
+      passState: { passUntil: 0, cooldownUntil: 0 }
+    },
     () => {
       $("status").textContent = "Today reset";
       setTimeout(() => ($("status").textContent = ""), 1500);
