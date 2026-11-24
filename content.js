@@ -29,7 +29,16 @@ const DEFAULTS = {
   pomodoroMinutes: 20,
   reminderSeconds: 3,
   reminderSize: 20,
-  reminderText: "Quick reset \u2014 breathe, then back to focus."
+  reminderText: "Quick reset \u2014 breathe, then back to focus.",
+
+  // Smart video guard (YouTube watch pages)
+  funMinutes: 2,
+  moderateMinutes: 7,
+  moderateDailyMinutes: 15,
+  eduChannels: ["organic chemistry tutor", "khan academy", "3blue1brown", "mit opencourseware", "crash course", "physics wallah"],
+  moderateChannels: ["upgrad", "groww", "think school", "wings", "getsetfly", "get set fly"],
+  eduKeywords: ["lecture", "tutorial", "explained", "derivation", "theorem", "problem set", "class 11", "class 12", "jee", "neet", "chemistry", "physics", "mathematics", "calculus", "revision", "syllabus", "exam", "proof", "equation", "organic chemistry"],
+  funKeywords: ["prank", "vlog", "reaction", "funny", "meme", "comedy", "challenge", "gameplay", "unboxing", "roast", "song", "movie", "trailer", "web series", "standup", "gaming"]
 };
 
 let settings = { ...DEFAULTS };
@@ -171,7 +180,7 @@ function persistSession() {
 
 function start() {
   if (tick) return;
-  chrome.storage.local.get({ daily: null, passState: null, targetProgress: null }, (d) => {
+  chrome.storage.local.get({ daily: null, passState: null, targetProgress: null, videoDaily: null }, (d) => {
     daily =
       d.daily && d.daily.date === todayKey()
         ? d.daily
@@ -185,6 +194,10 @@ function start() {
       d.targetProgress && d.targetProgress.date === todayKey()
         ? d.targetProgress
         : { date: todayKey(), byKey: {} };
+    videoDaily =
+      d.videoDaily && d.videoDaily.day === todayKey()
+        ? d.videoDaily
+        : { day: todayKey(), moderateSeconds: 0, byId: {} };
     loadSession(() => {
       tick = setInterval(beat, 1000);
     });
@@ -206,6 +219,124 @@ function trackTarget(tgt) {
   if (visibleSeconds % 10 === 0) chrome.storage.local.set({ targetProgress });
 }
 
+// ---- Smart video guard (YouTube watch pages) ----------------------------
+// Classifies a video from channel + title + description, then applies a
+// per-category time budget. Heuristic by design: there is no on-device model.
+
+let videoState = { id: null, category: null, watched: 0 };
+let videoDaily = null;
+
+const isWatchPage = () => location.pathname === "/watch";
+const currentVideoId = () => new URLSearchParams(location.search).get("v") || "";
+
+function readVideoMeta() {
+  const txt = (sel) => {
+    const el = document.querySelector(sel);
+    return el && el.textContent ? el.textContent.trim() : "";
+  };
+  const channel =
+    txt("ytd-video-owner-renderer #channel-name a") ||
+    txt("#owner #channel-name a") ||
+    txt("ytd-channel-name a");
+  const title =
+    txt("h1.ytd-watch-metadata yt-formatted-string") ||
+    txt("#title h1 yt-formatted-string") ||
+    txt("#title h1") ||
+    document.title.replace(/ - YouTube$/, "");
+  const desc = txt("#description-inline-expander") || "";
+  return { channel, title, desc };
+}
+
+function classifyVideo(meta) {
+  const ch = meta.channel.toLowerCase();
+  const text = (meta.title + " " + meta.desc).toLowerCase();
+  const chHas = (list) => (list || []).some((k) => k && ch.includes(String(k).toLowerCase()));
+  if (chHas(settings.eduChannels)) return "edu";
+  if (chHas(settings.moderateChannels)) return "moderate";
+  const count = (list) =>
+    (list || []).filter((k) => k && text.includes(String(k).toLowerCase())).length;
+  const edu = count(settings.eduKeywords);
+  const fun = count(settings.funKeywords);
+  if (edu >= 2 && fun === 0) return "edu";
+  if (fun > edu) return "fun";
+  if (edu >= 1) return "moderate";
+  return "fun";
+}
+
+function ensureVideoDaily() {
+  if (!videoDaily || videoDaily.day !== todayKey())
+    videoDaily = { day: todayKey(), moderateSeconds: 0, byId: {} };
+}
+
+function videoGuard() {
+  const vid = currentVideoId();
+  if (!vid) return;
+
+  const meta = readVideoMeta();
+  if (!meta.channel) return; // wait until the channel name is in the DOM
+
+  ensureVideoDaily();
+
+  if (videoState.id !== vid) {
+    const saved = videoDaily.byId[vid];
+    videoState = {
+      id: vid,
+      category: saved && saved.category ? saved.category : classifyVideo(meta),
+      watched: saved ? saved.watched || 0 : 0
+    };
+    videoDaily.byId[vid] = { category: videoState.category, watched: videoState.watched };
+  }
+
+  if (videoState.category === "edu") {
+    hideBlock();
+    return;
+  }
+
+  const video = document.querySelector("video");
+  const playing =
+    !!video &&
+    !video.paused &&
+    !video.ended &&
+    video.readyState > 2 &&
+    document.visibilityState === "visible";
+
+  if (playing) {
+    videoState.watched++;
+    videoDaily.byId[vid].watched = videoState.watched;
+    if (videoState.category === "moderate") videoDaily.moderateSeconds++;
+    if (videoState.watched % 5 === 0) chrome.storage.local.set({ videoDaily });
+  }
+
+  const funLimit = Math.max(1, Number(settings.funMinutes) || 2) * 60;
+  const modLimit = Math.max(1, Number(settings.moderateMinutes) || 7) * 60;
+  const dailyLimit = Math.max(1, Number(settings.moderateDailyMinutes) || 15) * 60;
+
+  if (videoState.category === "fun" && videoState.watched >= funLimit) {
+    showBlock(
+      "That's enough",
+      "Entertainment video limit reached (" + settings.funMinutes + " min). Back to study."
+    );
+    return;
+  }
+  if (videoState.category === "moderate") {
+    if (videoDaily.moderateSeconds >= dailyLimit) {
+      showBlock(
+        "Daily limit",
+        "You've used your " + settings.moderateDailyMinutes + " min of learning videos today."
+      );
+      return;
+    }
+    if (videoState.watched >= modLimit) {
+      showBlock(
+        "Pass used up",
+        "This video's " + settings.moderateMinutes + "-minute pass is finished."
+      );
+      return;
+    }
+  }
+  hideBlock();
+}
+
 function beat() {
   if (document.visibilityState !== "visible") return;
   rolloverIfNeeded();
@@ -215,18 +346,26 @@ function beat() {
   // Strict block wins over everything.
   if (isBlocked()) {
     hideAlert();
-    showBlock();
+    showBlock("Blocked", "This page is on your strict block list.");
     return;
   }
-  hideBlock();
 
   // Exempt surfaces: allow-URL, allow-domain, or an active target.
   const tgt = activeTarget();
   if (isUrlAllowed() || isAllowlisted(location.hostname) || tgt) {
     hideAlert();
+    hideBlock();
     if (tgt) trackTarget(tgt);
     return;
   }
+
+  // Smart video guard on YouTube watch pages (replaces the generic time trigger).
+  if (isWatchPage()) {
+    hideAlert();
+    videoGuard();
+    return;
+  }
+  hideBlock();
 
   // Count-based trigger (YouTube Shorts).
   const sid = shortId();
@@ -458,8 +597,14 @@ function hideAlert() {
   }
 }
 
-function showBlock() {
-  if (blockEl && document.body.contains(blockEl)) return;
+function showBlock(titleText, msgText) {
+  if (blockEl && document.body.contains(blockEl)) {
+    const t = blockEl.querySelector(".sg-quote");
+    const m = blockEl.querySelector(".sg-question");
+    if (t && titleText) t.textContent = titleText;
+    if (m && msgText) m.textContent = msgText;
+    return;
+  }
 
   blockEl = document.createElement("div");
   blockEl.id = "sg-overlay";
@@ -469,11 +614,11 @@ function showBlock() {
 
   const title = document.createElement("div");
   title.className = "sg-quote";
-  title.textContent = "Blocked";
+  title.textContent = titleText || "Blocked";
 
   const msg = document.createElement("div");
   msg.className = "sg-question";
-  msg.textContent = "This page is on your strict block list.";
+  msg.textContent = msgText || "This page is on your strict block list.";
 
   const sub = document.createElement("div");
   sub.className = "sg-sub";

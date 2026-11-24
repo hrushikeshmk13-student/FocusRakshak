@@ -12,7 +12,7 @@ A Chrome/Edge extension (Manifest V3, unpacked) that:
 - keeps a **local journal** of what pulled you away;
 - optionally **syncs to a Google Sheet** so a weekly analysis can read it.
 
-Current version: **7.6** (shown in the popup title and journal footer).
+Current version: **7.7** (shown in the popup title and journal footer).
 
 > There is a separate Android build of this project. It is **not** covered by this
 > document.
@@ -126,6 +126,13 @@ forced pause (`pauseSeconds`) and is then subject to pass availability.
 | **Allow specific URLs** | — | Full/partial URL substrings exempt (e.g. one lecture video) |
 | **Strictly block URLs** | — | Full/partial URL substrings hard-blocked |
 | **Focus targets** | — | `match \| minutes` lines; silent + time-tracked |
+| **Fun video limit (min)** | 2 | Budget for an entertainment video |
+| **Learning video pass (min)** | 7 | Per-video budget for a learning video |
+| **Daily learning limit (min)** | 15 | Daily cap across all learning videos |
+| **Never-block channels** | Organic Chemistry Tutor, Khan Academy, … | Channels never blocked |
+| **Learning channels** | upGrad, Groww, Think School, Wings, GetSetFly | Channels on the 7-min budget |
+| **Educational keywords** | lecture, derivation, JEE, … | Title/description scoring |
+| **Entertainment keywords** | prank, vlog, reaction, … | Title/description scoring |
 | **Pomodoro enabled** | on | Periodic nudge on/off |
 | **Every N minutes** | 20 | Pomodoro interval |
 | **Show for (seconds)** | 3 | How long the nudge stays |
@@ -180,6 +187,28 @@ Matching is **substring, case-insensitive, against the full URL** (`location.hre
   `match: X/Y min today ✓` when met. Progress resets daily and is stored locally.
 
 ---
+
+### 6.1 Smart video guard (YouTube watch pages)
+
+On `/watch` pages the generic time trigger is replaced by a per-video classifier.
+It reads the **channel name, title and description** from the page and sorts the
+video into one of three buckets:
+
+| Bucket | How it is detected | Budget |
+|---|---|---|
+| **Educational** | channel in *Never-block channels*, or ≥2 educational keywords and zero entertainment keywords | never blocked |
+| **Learning** | channel in *Learning channels*, or exactly 1 educational keyword | **7 min** per video, plus **15 min** per day across learning videos |
+| **Entertainment** | everything else, or entertainment keywords outscoring educational ones | **2 min** per video |
+
+Watched time counts only while the `<video>` is actually playing and the tab is
+visible, and is persisted per video ID per day (`videoDaily`), so refreshing does
+not reset the budget. When a budget is exhausted the block card shows the reason
+and a *Back to study* button.
+
+**This is heuristic, not comprehension.** The extension has no model and no
+backend; it cannot tell that a video is educational if the channel and the
+title/description do not say so. If a channel is misclassified, add it to one of
+the two channel lists — a channel match always wins over keyword scoring.
 
 ## 7. Pomodoro nudge
 

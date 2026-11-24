@@ -136,6 +136,35 @@
     </div>
 
     <div class="section">
+      <div class="section-title">Smart video guard (YouTube)</div>
+      <div class="row">
+        <div>
+          <label>Fun video limit (min)</label>
+          <input id="funMinutes" type="number" min="1" />
+        </div>
+        <div>
+          <label>Learning video pass (min)</label>
+          <input id="moderateMinutes" type="number" min="1" />
+        </div>
+      </div>
+      <label>Daily learning limit (min)</label>
+      <input id="moderateDailyMinutes" type="number" min="1" />
+
+      <label>Never-block channels (one per line)</label>
+      <textarea id="eduChannels" class="mono"></textarea>
+
+      <label>Learning channels (one per line)</label>
+      <textarea id="moderateChannels" class="mono"></textarea>
+
+      <label>Educational keywords (comma or newline)</label>
+      <textarea id="eduKeywords" class="mono"></textarea>
+
+      <label>Entertainment keywords (comma or newline)</label>
+      <textarea id="funKeywords" class="mono"></textarea>
+      <div class="hint">Channel match wins first, then keywords in the title/description. This is heuristic — it cannot actually understand the video.</div>
+    </div>
+
+    <div class="section">
       <div class="section-title">Pomodoro reminder</div>
       <label class="check"><input type="checkbox" id="pomodoroEnabled" /> Enabled</label>
       <div class="row">

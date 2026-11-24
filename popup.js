@@ -21,11 +21,19 @@ const DEFAULTS = {
   pomodoroMinutes: 20,
   reminderSeconds: 3,
   reminderSize: 20,
-  reminderText: "Quick reset \u2014 breathe, then back to focus."
+  reminderText: "Quick reset \u2014 breathe, then back to focus.",
+  funMinutes: 2,
+  moderateMinutes: 7,
+  moderateDailyMinutes: 15,
+  eduChannels: ["organic chemistry tutor", "khan academy", "3blue1brown", "mit opencourseware", "crash course", "physics wallah"],
+  moderateChannels: ["upgrad", "groww", "think school", "wings", "getsetfly", "get set fly"],
+  eduKeywords: ["lecture", "tutorial", "explained", "derivation", "theorem", "problem set", "class 11", "class 12", "jee", "neet", "chemistry", "physics", "mathematics", "calculus", "revision", "syllabus", "exam", "proof", "equation", "organic chemistry"],
+  funKeywords: ["prank", "vlog", "reaction", "funny", "meme", "comedy", "challenge", "gameplay", "unboxing", "roast", "song", "movie", "trailer", "web series", "standup", "gaming"]
 };
 
 const $ = (id) => document.getElementById(id);
 const lines = (v) => v.split("\n").map((l) => l.trim()).filter(Boolean);
+const items = (v) => v.split(/[\n,]+/).map((l) => l.trim()).filter(Boolean);
 
 chrome.storage.sync.get(DEFAULTS, (s) => {
   $("quote").value = s.quote;
@@ -50,6 +58,13 @@ chrome.storage.sync.get(DEFAULTS, (s) => {
   $("reminderSeconds").value = s.reminderSeconds;
   $("reminderSize").value = s.reminderSize;
   $("reminderText").value = s.reminderText;
+  $("funMinutes").value = s.funMinutes;
+  $("moderateMinutes").value = s.moderateMinutes;
+  $("moderateDailyMinutes").value = s.moderateDailyMinutes;
+  $("eduChannels").value = (s.eduChannels || []).join("\n");
+  $("moderateChannels").value = (s.moderateChannels || []).join("\n");
+  $("eduKeywords").value = (s.eduKeywords || []).join("\n");
+  $("funKeywords").value = (s.funKeywords || []).join("\n");
   $("syncUrl").value = s.syncUrl || "";
 });
 
@@ -125,6 +140,13 @@ $("save").addEventListener("click", () => {
       reminderSeconds: Math.max(1, Number($("reminderSeconds").value) || DEFAULTS.reminderSeconds),
       reminderSize: Math.max(10, Math.min(80, Number($("reminderSize").value) || DEFAULTS.reminderSize)),
       reminderText: $("reminderText").value.trim() || DEFAULTS.reminderText,
+      funMinutes: Math.max(1, Number($("funMinutes").value) || DEFAULTS.funMinutes),
+      moderateMinutes: Math.max(1, Number($("moderateMinutes").value) || DEFAULTS.moderateMinutes),
+      moderateDailyMinutes: Math.max(1, Number($("moderateDailyMinutes").value) || DEFAULTS.moderateDailyMinutes),
+      eduChannels: lines($("eduChannels").value),
+      moderateChannels: lines($("moderateChannels").value),
+      eduKeywords: items($("eduKeywords").value),
+      funKeywords: items($("funKeywords").value),
       syncUrl: $("syncUrl").value.trim()
     },
     () => {
