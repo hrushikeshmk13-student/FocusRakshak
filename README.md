@@ -12,7 +12,7 @@ A Chrome/Edge extension (Manifest V3, unpacked) that:
 - keeps a **local journal** of what pulled you away;
 - optionally **syncs to a Google Sheet** so a weekly analysis can read it.
 
-Current version: **7.5** (shown in the popup title and journal footer).
+Current version: **7.6** (shown in the popup title and journal footer).
 
 > There is a separate Android build of this project. It is **not** covered by this
 > document.
@@ -127,7 +127,6 @@ forced pause (`pauseSeconds`) and is then subject to pass availability.
 | **Strictly block URLs** | — | Full/partial URL substrings hard-blocked |
 | **Focus targets** | — | `match \| minutes` lines; silent + time-tracked |
 | **Pomodoro enabled** | on | Periodic nudge on/off |
-| **Also nudge on allowed/target pages** | off | Show the nudge on exempt surfaces too |
 | **Every N minutes** | 20 | Pomodoro interval |
 | **Show for (seconds)** | 3 | How long the nudge stays |
 | **Size (% of screen width)** | 20 | Nudge width (min 240 px) |
@@ -197,9 +196,10 @@ On each alarm:
   **system notification** via `chrome.notifications`, which the OS draws above
   other windows.
 
-The nudge is **suppressed on exempt surfaces** (allow-URL, allow-domain, active
-target) unless *Also nudge on allowed / target pages* is ticked, and it never
-appears while the strict-block card is up.
+The nudge adapts to the surface. On **exempt** pages (allow-URL, allow-domain,
+active target) it covers **75% of the page** (75vw x 75vh) and is **capped at 5
+seconds**. On any other page it keeps the configured size and shows for **at least
+5 seconds**. It never appears while the strict-block card is up.
 
 **A browser extension cannot paint a custom overlay over other desktop apps.** The
 notification is the closest an extension can get; a true overlay would need a

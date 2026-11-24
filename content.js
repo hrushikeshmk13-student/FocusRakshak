@@ -25,7 +25,6 @@ const DEFAULTS = {
   passResumeHour: 6,       // ...until this hour
 
   syncUrl: "",
-  pomodoroOnAllowed: false,
   pomodoroEnabled: true,
   pomodoroMinutes: 20,
   reminderSeconds: 3,
@@ -513,14 +512,20 @@ function hideBlock() {
 let pomodoroEl = null;
 let pomodoroTimer = null;
 
-function showPomodoro(text, seconds, size) {
+function showPomodoro(text, seconds, size, big) {
   if (pomodoroEl) pomodoroEl.remove();
   if (pomodoroTimer) clearTimeout(pomodoroTimer);
 
   const el = document.createElement("div");
   el.id = "sg-pomodoro";
-  const pct = Math.max(10, Math.min(80, Number(size) || 20));
-  el.style.width = "max(240px, " + pct + "vw)";
+  if (big) {
+    el.classList.add("sg-pomo-big");
+    el.style.width = "75vw";
+    el.style.height = "75vh";
+  } else {
+    const pct = Math.max(10, Math.min(80, Number(size) || 20));
+    el.style.width = "max(240px, " + pct + "vw)";
+  }
 
   const label = document.createElement("div");
   label.className = "sg-pomo-label";
@@ -552,9 +557,13 @@ function dismissPomodoro() {
 chrome.runtime.onMessage.addListener((msg) => {
   if (!msg || msg.type !== "pomodoro") return;
   if (isBlocked()) return; // the block card already owns the screen
-  const quiet = isUrlAllowed() || isAllowlisted(location.hostname) || !!activeTarget();
-  if (quiet && !settings.pomodoroOnAllowed) return; // allowed pages stay quiet
-  showPomodoro(msg.text, msg.seconds, msg.size);
+
+  const allowed = isUrlAllowed() || isAllowlisted(location.hostname) || !!activeTarget();
+  const base = Math.max(1, Number(msg.seconds) || 3);
+  // Allowed surfaces: big (75% of the page) and capped at 5 s.
+  // Everywhere else: at least 5 s.
+  const secs = allowed ? Math.min(base, 5) : Math.max(base, 5);
+  showPomodoro(msg.text, secs, msg.size, allowed);
 });
 
 // Flush state on unload so a refresh cannot wipe the session.

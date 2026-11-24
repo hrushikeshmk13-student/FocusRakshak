@@ -151,3 +151,15 @@
   from { opacity: 0; transform: translate(-50%, -48%); }
   to { opacity: 1; transform: translate(-50%, -50%); }
 }
+
+/* Big variant: used on allowed surfaces — 75% of the page, capped at 5s. */
+#sg-pomodoro.sg-pomo-big {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  border-radius: 22px;
+}
+#sg-pomodoro.sg-pomo-big .sg-pomo-text {
+  font-size: clamp(20px, 3vw, 44px);
+}

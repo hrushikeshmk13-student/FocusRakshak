@@ -17,7 +17,6 @@ const DEFAULTS = {
   passCutoffHour: 23,
   passResumeHour: 6,
   syncUrl: "",
-  pomodoroOnAllowed: false,
   pomodoroEnabled: true,
   pomodoroMinutes: 20,
   reminderSeconds: 3,
@@ -47,7 +46,6 @@ chrome.storage.sync.get(DEFAULTS, (s) => {
   $("targets").value = (s.targets || []).map((t) => t.match + " | " + t.minutes).join("\n");
   $("studyUrl").value = s.studyUrl;
   $("pomodoroEnabled").checked = !!s.pomodoroEnabled;
-  $("pomodoroOnAllowed").checked = !!s.pomodoroOnAllowed;
   $("pomodoroMinutes").value = s.pomodoroMinutes;
   $("reminderSeconds").value = s.reminderSeconds;
   $("reminderSize").value = s.reminderSize;
@@ -123,7 +121,6 @@ $("save").addEventListener("click", () => {
       targets: parseTargets($("targets").value),
       studyUrl: $("studyUrl").value.trim() || DEFAULTS.studyUrl,
       pomodoroEnabled: $("pomodoroEnabled").checked,
-      pomodoroOnAllowed: $("pomodoroOnAllowed").checked,
       pomodoroMinutes: Math.max(1, Number($("pomodoroMinutes").value) || DEFAULTS.pomodoroMinutes),
       reminderSeconds: Math.max(1, Number($("reminderSeconds").value) || DEFAULTS.reminderSeconds),
       reminderSize: Math.max(10, Math.min(80, Number($("reminderSize").value) || DEFAULTS.reminderSize)),
