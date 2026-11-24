@@ -12,7 +12,7 @@ A Chrome/Edge extension (Manifest V3, unpacked) that:
 - keeps a **local journal** of what pulled you away;
 - optionally **syncs to a Google Sheet** so a weekly analysis can read it.
 
-Current version: **7.4** (shown in the popup title and journal footer).
+Current version: **7.5** (shown in the popup title and journal footer).
 
 > There is a separate Android build of this project. It is **not** covered by this
 > document.
@@ -95,6 +95,11 @@ Every second (only while the tab is visible) the content script evaluates, in th
 
 An **active pass window** suppresses triggers 3 and 4 until it expires.
 
+Timers and counters are **persisted per origin** in `chrome.storage.local`
+(`siteSession:<origin>`, keyed by day and flushed every 5 s plus on `pagehide`), so
+**refreshing the page does not reset them**. Reloading, reopening the tab, or
+opening a second tab to the same site continues the same session.
+
 **Distraction is never delayed.** The Distraction button is enabled the instant the
 card appears and opens the note form immediately. Only **Traction** waits out the
 forced pause (`pauseSeconds`) and is then subject to pass availability.
@@ -122,6 +127,7 @@ forced pause (`pauseSeconds`) and is then subject to pass availability.
 | **Strictly block URLs** | — | Full/partial URL substrings hard-blocked |
 | **Focus targets** | — | `match \| minutes` lines; silent + time-tracked |
 | **Pomodoro enabled** | on | Periodic nudge on/off |
+| **Also nudge on allowed/target pages** | off | Show the nudge on exempt surfaces too |
 | **Every N minutes** | 20 | Pomodoro interval |
 | **Show for (seconds)** | 3 | How long the nudge stays |
 | **Size (% of screen width)** | 20 | Nudge width (min 240 px) |
@@ -190,6 +196,10 @@ On each alarm:
 - Otherwise (Chrome in the background, or a `chrome://` / Web Store tab) → a
   **system notification** via `chrome.notifications`, which the OS draws above
   other windows.
+
+The nudge is **suppressed on exempt surfaces** (allow-URL, allow-domain, active
+target) unless *Also nudge on allowed / target pages* is ticked, and it never
+appears while the strict-block card is up.
 
 **A browser extension cannot paint a custom overlay over other desktop apps.** The
 notification is the closest an extension can get; a true overlay would need a

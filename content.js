@@ -25,6 +25,7 @@ const DEFAULTS = {
   passResumeHour: 6,       // ...until this hour
 
   syncUrl: "",
+  pomodoroOnAllowed: false,
   pomodoroEnabled: true,
   pomodoroMinutes: 20,
   reminderSeconds: 3,
@@ -127,6 +128,48 @@ chrome.storage.onChanged.addListener((_c, area) => {
   if (area === "sync") chrome.storage.sync.get(DEFAULTS, (s) => { settings = s; });
 });
 
+// Per-origin session state, persisted so a page refresh does not reset the
+// timers/counters. Keyed by origin and reset daily.
+const originKey = () => location.origin;
+
+const sessionKey = () => "siteSession:" + originKey();
+
+function loadSession(done) {
+  chrome.storage.local.get({ [sessionKey()]: null }, (d) => {
+    const saved = d[sessionKey()];
+    if (saved && saved.day === todayKey()) {
+      visibleSeconds = saved.seconds || 0;
+      sessionViewed = saved.shorts || 0;
+      lastShortId = saved.lastShortId || null;
+      nextAlertAt =
+        saved.nextAlertAt != null
+          ? saved.nextAlertAt
+          : Math.max(1, settings.dwellMinutes || 1) * 60;
+      nextShortAlertAt =
+        saved.nextShortAlertAt != null
+          ? saved.nextShortAlertAt
+          : Math.max(1, settings.limit || 1);
+    } else {
+      nextAlertAt = Math.max(1, settings.dwellMinutes || 1) * 60;
+      nextShortAlertAt = Math.max(1, settings.limit || 1);
+    }
+    done();
+  });
+}
+
+function persistSession() {
+  chrome.storage.local.set({
+    [sessionKey()]: {
+      day: todayKey(),
+      seconds: visibleSeconds,
+      nextAlertAt,
+      shorts: sessionViewed,
+      nextShortAlertAt,
+      lastShortId
+    }
+  });
+}
+
 function start() {
   if (tick) return;
   chrome.storage.local.get({ daily: null, passState: null, targetProgress: null }, (d) => {
@@ -143,9 +186,9 @@ function start() {
       d.targetProgress && d.targetProgress.date === todayKey()
         ? d.targetProgress
         : { date: todayKey(), byKey: {} };
-    nextAlertAt = Math.max(1, settings.dwellMinutes || 1) * 60;
-    nextShortAlertAt = Math.max(1, settings.limit || 1);
-    tick = setInterval(beat, 1000);
+    loadSession(() => {
+      tick = setInterval(beat, 1000);
+    });
   });
 }
 
@@ -168,6 +211,7 @@ function beat() {
   if (document.visibilityState !== "visible") return;
   rolloverIfNeeded();
   visibleSeconds++;
+  if (visibleSeconds % 5 === 0) persistSession();
 
   // Strict block wins over everything.
   if (isBlocked()) {
@@ -193,12 +237,14 @@ function beat() {
       sessionViewed++;
       daily.shortsViewed = (daily.shortsViewed || 0) + 1;
       persistDaily();
+      persistSession();
     }
     if (!overlay && !inPassWindow() && sessionViewed >= nextShortAlertAt) return showAlert();
   } else if (lastShortId !== null) {
     lastShortId = null;
     sessionViewed = 0;
     nextShortAlertAt = Math.max(1, settings.limit || 1);
+    persistSession();
   }
 
   // Time-based trigger (everywhere else).
@@ -504,5 +550,15 @@ function dismissPomodoro() {
 }
 
 chrome.runtime.onMessage.addListener((msg) => {
-  if (msg && msg.type === "pomodoro") showPomodoro(msg.text, msg.seconds, msg.size);
+  if (!msg || msg.type !== "pomodoro") return;
+  if (isBlocked()) return; // the block card already owns the screen
+  const quiet = isUrlAllowed() || isAllowlisted(location.hostname) || !!activeTarget();
+  if (quiet && !settings.pomodoroOnAllowed) return; // allowed pages stay quiet
+  showPomodoro(msg.text, msg.seconds, msg.size);
+});
+
+// Flush state on unload so a refresh cannot wipe the session.
+window.addEventListener("pagehide", persistSession);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") persistSession();
 });
