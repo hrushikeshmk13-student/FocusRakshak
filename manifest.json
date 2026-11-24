@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "FocusRakshak",
-  "version": "7.7",
+  "version": "7.8",
   "description": "Traction-or-distraction guard + Pomodoro nudges, with a private local journal.",
   "permissions": [
     "storage",

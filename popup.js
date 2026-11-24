@@ -22,6 +22,7 @@ const DEFAULTS = {
   reminderSeconds: 3,
   reminderSize: 20,
   reminderText: "Quick reset \u2014 breathe, then back to focus.",
+  hideYouTubeSidebar: true,
   funMinutes: 2,
   moderateMinutes: 7,
   moderateDailyMinutes: 15,
@@ -58,6 +59,7 @@ chrome.storage.sync.get(DEFAULTS, (s) => {
   $("reminderSeconds").value = s.reminderSeconds;
   $("reminderSize").value = s.reminderSize;
   $("reminderText").value = s.reminderText;
+  $("hideYouTubeSidebar").checked = !!s.hideYouTubeSidebar;
   $("funMinutes").value = s.funMinutes;
   $("moderateMinutes").value = s.moderateMinutes;
   $("moderateDailyMinutes").value = s.moderateDailyMinutes;
@@ -140,6 +142,7 @@ $("save").addEventListener("click", () => {
       reminderSeconds: Math.max(1, Number($("reminderSeconds").value) || DEFAULTS.reminderSeconds),
       reminderSize: Math.max(10, Math.min(80, Number($("reminderSize").value) || DEFAULTS.reminderSize)),
       reminderText: $("reminderText").value.trim() || DEFAULTS.reminderText,
+      hideYouTubeSidebar: $("hideYouTubeSidebar").checked,
       funMinutes: Math.max(1, Number($("funMinutes").value) || DEFAULTS.funMinutes),
       moderateMinutes: Math.max(1, Number($("moderateMinutes").value) || DEFAULTS.moderateMinutes),
       moderateDailyMinutes: Math.max(1, Number($("moderateDailyMinutes").value) || DEFAULTS.moderateDailyMinutes),

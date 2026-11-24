@@ -32,6 +32,7 @@ const DEFAULTS = {
   reminderText: "Quick reset \u2014 breathe, then back to focus.",
 
   // Smart video guard (YouTube watch pages)
+  hideYouTubeSidebar: true,
   funMinutes: 2,
   moderateMinutes: 7,
   moderateDailyMinutes: 15,
@@ -133,7 +134,11 @@ chrome.storage.sync.get(DEFAULTS, (s) => {
 });
 
 chrome.storage.onChanged.addListener((_c, area) => {
-  if (area === "sync") chrome.storage.sync.get(DEFAULTS, (s) => { settings = s; });
+  if (area === "sync")
+    chrome.storage.sync.get(DEFAULTS, (s) => {
+      settings = s;
+      applyYtSidebar();
+    });
 });
 
 // Per-origin session state, persisted so a page refresh does not reset the
@@ -198,6 +203,7 @@ function start() {
       d.videoDaily && d.videoDaily.day === todayKey()
         ? d.videoDaily
         : { day: todayKey(), moderateSeconds: 0, byId: {} };
+    applyYtSidebar();
     loadSession(() => {
       tick = setInterval(beat, 1000);
     });
@@ -337,11 +343,20 @@ function videoGuard() {
   hideBlock();
 }
 
+function applyYtSidebar() {
+  const on =
+    !!settings.hideYouTubeSidebar && /(^|\.)youtube\.com$/.test(location.hostname);
+  document.documentElement.classList.toggle("sg-hide-yt-sidebar", on);
+}
+
 function beat() {
   if (document.visibilityState !== "visible") return;
   rolloverIfNeeded();
   visibleSeconds++;
-  if (visibleSeconds % 5 === 0) persistSession();
+  if (visibleSeconds % 5 === 0) {
+    persistSession();
+    applyYtSidebar();
+  }
 
   // Strict block wins over everything.
   if (isBlocked()) {

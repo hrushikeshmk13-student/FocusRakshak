@@ -12,7 +12,7 @@ A Chrome/Edge extension (Manifest V3, unpacked) that:
 - keeps a **local journal** of what pulled you away;
 - optionally **syncs to a Google Sheet** so a weekly analysis can read it.
 
-Current version: **7.7** (shown in the popup title and journal footer).
+Current version: **7.8** (shown in the popup title and journal footer).
 
 > There is a separate Android build of this project. It is **not** covered by this
 > document.
@@ -133,6 +133,7 @@ forced pause (`pauseSeconds`) and is then subject to pass availability.
 | **Learning channels** | upGrad, Groww, Think School, Wings, GetSetFly | Channels on the 7-min budget |
 | **Educational keywords** | lecture, derivation, JEE, … | Title/description scoring |
 | **Entertainment keywords** | prank, vlog, reaction, … | Title/description scoring |
+| **Hide recommendations sidebar** | on | Hides YouTube's right-hand related-videos rail on watch pages |
 | **Pomodoro enabled** | on | Periodic nudge on/off |
 | **Every N minutes** | 20 | Pomodoro interval |
 | **Show for (seconds)** | 3 | How long the nudge stays |
@@ -204,6 +205,11 @@ Watched time counts only while the `<video>` is actually playing and the tab is
 visible, and is persisted per video ID per day (`videoDaily`), so refreshing does
 not reset the budget. When a budget is exhausted the block card shows the reason
 and a *Back to study* button.
+
+Separately, *Hide the recommendations sidebar* removes YouTube's right-hand rail
+(`#secondary`) on watch pages and lets the player take the full width. That rail
+is the single biggest source of "next video" drift, so hiding it does more for
+your attention than any timer.
 
 **This is heuristic, not comprehension.** The extension has no model and no
 backend; it cannot tell that a video is educational if the channel and the

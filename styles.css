@@ -163,3 +163,16 @@
 #sg-pomodoro.sg-pomo-big .sg-pomo-text {
   font-size: clamp(20px, 3vw, 44px);
 }
+
+/* Hide the YouTube watch-page recommendations rail (opt-in). */
+html.sg-hide-yt-sidebar ytd-watch-flexy #secondary,
+html.sg-hide-yt-sidebar ytd-watch-flexy #related,
+html.sg-hide-yt-sidebar ytd-watch-flexy #secondary-inner {
+  display: none !important;
+}
+html.sg-hide-yt-sidebar ytd-watch-flexy #primary {
+  max-width: none !important;
+}
+html.sg-hide-yt-sidebar ytd-watch-flexy #columns {
+  max-width: none !important;
+}
