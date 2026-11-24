@@ -12,7 +12,7 @@ A Chrome/Edge extension (Manifest V3, unpacked) that:
 - keeps a **local journal** of what pulled you away;
 - optionally **syncs to a Google Sheet** so a weekly analysis can read it.
 
-Current version: **7.8** (shown in the popup title and journal footer).
+Current version: **7.9** (shown in the popup title and journal footer).
 
 > There is a separate Android build of this project. It is **not** covered by this
 > document.
@@ -266,6 +266,40 @@ Entries saved from the alert are tagged **distraction**; hand-written ones are
 | Pass state, daily counters, target progress | `chrome.storage.local` | No | No |
 | Google Sheet + Apps Script | the Google account that made them | No | No |
 | Weekly analysis cron | the Sarvam AI account | No | No |
+
+### 9.1 Removal resistance
+
+Chrome does not allow an extension to block its own removal, so there are three
+layers, of decreasing honesty and increasing strength:
+
+- **Decoy remove button** (popup → *Remove extension*): shows a removal screen and
+deletes nothing. It only catches the path through our popup — `chrome://extensions`
+still works. The attempt is logged to the Sheet as `remove_attempt`.
+- **Uninstall beacon + heartbeat**: `chrome.runtime.setUninstallURL` opens your
+`/exec` URL with `?event=uninstall` on a real uninstall, which `doGet` appends as an
+`uninstall` row. A **heartbeat** row is written every 30 minutes, so a *silent*
+sheet (no heartbeat, no uninstall row) points to the extension being **disabled**
+rather than removed.
+- **Enterprise policy** — the only true lock. With a force-install policy the
+extension cannot be removed from the UI:
+
+  ```json
+  {
+    "ExtensionSettings": {
+      "<extension-id>": {
+        "installation_mode": "force_installed",
+        "update_url": "https://clients2.google.com/service/update2/crx"
+      }
+    }
+  }
+  ```
+
+  On Windows this lives under `HKLM\SOFTWARE\Policies\Google\Chrome\ExtensionSettings`.
+  It needs admin rights, and `force_installed` requires a packaged CRX with an
+  `update_url` — an unpacked folder cannot be force-installed, so this is a real
+  deployment step (publish or self-host a CRX), not a toggle.
+
+  The heartbeat adds ~48 rows a day to the `Log` tab; filter on `type` when reading.
 
 **The extension-ID catch:** for an *unpacked* extension Chrome derives the ID from
 the folder's absolute path. A different device or path yields a different ID, so

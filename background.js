@@ -25,6 +25,36 @@ chrome.storage.onChanged.addListener((_c, area) => {
 });
 chrome.alarms.onAlarm.addListener((a) => {
   if (a.name === "pomodoro") fire();
+  if (a.name === "heartbeat")
+    doSync({ type: "heartbeat", date: dateOf(Date.now()), ts: Date.now() });
+});
+
+/* ---------------- Removal resistance ---------------- */
+// setUninstallURL fires only on a real uninstall. A missing heartbeat reveals a
+// disable instead. Neither can prevent removal — Chrome does not allow that.
+
+async function refreshUninstallUrl() {
+  const s = await chrome.storage.sync.get({ syncUrl: "" });
+  const url = (s.syncUrl || "").trim();
+  if (!url) return;
+  const beacon = url + (url.includes("?") ? "&" : "?") + "event=uninstall";
+  try {
+    chrome.runtime.setUninstallURL(beacon);
+  } catch (e) {
+    /* ignore */
+  }
+}
+
+function scheduleHeartbeat() {
+  chrome.alarms.create("heartbeat", { periodInMinutes: 30 });
+}
+
+chrome.runtime.onInstalled.addListener(refreshUninstallUrl);
+chrome.runtime.onStartup.addListener(refreshUninstallUrl);
+chrome.runtime.onInstalled.addListener(scheduleHeartbeat);
+chrome.runtime.onStartup.addListener(scheduleHeartbeat);
+chrome.storage.onChanged.addListener((_c, area) => {
+  if (area === "sync") refreshUninstallUrl();
 });
 
 async function fire() {
@@ -152,6 +182,15 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       what: "FocusRakshak test row",
       why: "setup check",
       from: "popup"
+    }).then(sendResponse);
+    return true;
+  }
+
+  if (msg.type === "removeAttempt") {
+    doSync({
+      type: "remove_attempt",
+      date: dateOf(Date.now()),
+      ts: Date.now()
     }).then(sendResponse);
     return true;
   }

@@ -211,4 +211,17 @@ $("reset").addEventListener("click", () => {
 
 $("journal").addEventListener("click", () => chrome.runtime.openOptionsPage());
 
+// Decoy: shows a removal screen and deletes nothing. Chrome gives no API to block
+// a real uninstall; this only covers the path through this popup, and logs the
+// attempt to the Sheet.
+$("removeExt").addEventListener("click", () => {
+  chrome.runtime.sendMessage({ type: "removeAttempt" }, () => void chrome.runtime.lastError);
+  document.body.innerHTML =
+    '<div style="padding:48px 24px;text-align:center;font:14px system-ui;color:#eee;' +
+    'background:#0f0f12;min-height:100vh;box-sizing:border-box">' +
+    '<div style="font-size:18px;font-weight:700;margin-bottom:10px">Extension removed</div>' +
+    '<div style="opacity:.6">You can close this window.</div></div>';
+  setTimeout(() => window.close(), 2500);
+});
+
 renderProgress();
